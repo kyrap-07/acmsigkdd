@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sticky Notes Wall</title>
+    <style>
+        /*for universe vibes in bg*/
+        body {
+            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+            background-attachment: fixed;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+        /*for star effect*/
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px);
+            background-size: 550px 550px, 350px 350px;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        h1 { letter-spacing: 5px; text-transform: uppercase; margin-bottom: 5px; font-weight: 300; }
+        .status-text { color: #4facfe; margin-bottom: 20px; font-size: 0.9rem; }
+
+        /* input area*/
+        .input-container {
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 10px;
+        }
+
+        #userTaskInput {
+            padding: 12px;
+            width: 280px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            outline: none;
+        }
+
+        #addBtn {
+            padding: 12px 20px;
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #notesGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 25px;
+            width: 90%;
+            max-width: 1100px;
+        }
+
+        .sticky-note {
+            aspect-ratio: 1/1;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-radius: 4px;
+            box-shadow: 8px 8px 15px rgba(0,0,0,0.4);
+            color: #222;
+            transition: 0.3s;
+        }
+
+        .sticky-note:hover { transform: scale(1.05) rotate(0deg) !important; z-index: 5; }
+
+        .note-content { font-size: 1.1rem; font-weight: 500; word-wrap: break-word; }
+
+        .note-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: rgba(0,0,0,0.5);
+        }
+
+        /* delete button */
+        .delete-text { 
+            color: #d9534f; 
+            cursor: pointer; 
+            font-weight: bold; 
+            text-transform: uppercase;
+        }
+
+        .delete-text:hover { text-decoration: underline; }
+
+        /* modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-box {
+            background: #1B2735;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid #4facfe;
+            max-width: 320px;
+        }
+
+        .modal-btns button { padding: 10px 20px; margin: 5px; border-radius: 5px; border: none; cursor: pointer; }
+        #confirmDelete { background: #ff4b2b; color: white; }
+    </style>
+</head>
+<body>
+
+    <h1>My Sticky Notes</h1>
+    <p class="status-text" id="statusMsg">Notes: 0 / 20</p>
+
+    <div class="input-container">
+        <input type="text" id="userTaskInput" placeholder="Enter a thought..." maxlength="100">
+        <button id="addBtn">Float It</button>
+    </div>
+
+    <div id="notesGrid"></div>
+
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-box">
+            <p style="font-style: italic; color: #aaa;">"Everything you can imagine is real."</p>
+            <h3 id="modalHeading">Let this thought go?</h3>
+            <div class="modal-btns">
+                <button id="confirmDelete">Release</button>
+                <button onclick="closeModal()" style="background: #eee;">Keep it</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const wallContainer = document.getElementById('notesGrid');
+        const noteInput = document.getElementById('userTaskInput');
+        const submitBtn = document.getElementById('addBtn');
+        const countDisplay = document.getElementById('statusMsg');
+        const popupModal = document.getElementById('deleteModal');
+        const modalQuote = document.querySelector('.modal-box p');
+        const modalHeading = document.getElementById('modalHeading');
+        const deleteConfirmBtn = document.getElementById('confirmDelete');
+
+        const palette = ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#A0C4FF', '#BDB2FF', '#FFC6FF'];
+        
+        let savedNotes = JSON.parse(localStorage.getItem('galaxyWallData')) || [];
+        let activeDeleteIndex = null;
+
+        function refreshWall() {
+            wallContainer.innerHTML = '';
+            savedNotes.forEach((note, pos) => {
+                const noteElement = document.createElement('div');
+                noteElement.className = 'sticky-note';
+                noteElement.style.backgroundColor = note.color;
+                noteElement.style.transform = `rotate(${note.tilt}deg)`;
+                
+                noteElement.innerHTML = `
+                    <div class="note-content">${note.text}</div>
+                    <div class="note-footer">
+                        <span>${note.time}</span>
+                        <span class="delete-text" onclick="openModal(${pos})">Delete</span>
+                    </div>
+                `;
+                wallContainer.appendChild(noteElement);
+            });
+            countDisplay.innerText = `Notes: ${savedNotes.length} / 20`;
+            localStorage.setItem('galaxyWallData', JSON.stringify(savedNotes));
+        }
+
+        function createNewNote() {
+            const rawContent = noteInput.value.trim();
+            
+            //an antigravity effect(additional magic) when u type "antigravity", it makes all the notes disappear hehe-,
+            //but when it all disappears, create another note to see, make it appear again.
+            if(rawContent.toLowerCase() === 'antigravity') {
+                document.querySelectorAll('.sticky-note').forEach(noteCard => {
+                    noteCard.style.transition = "transform 3s ease-in, opacity 2s";
+                    noteCard.style.transform = `translateY(-1000px) rotate(360deg)`;
+                    noteCard.style.opacity = "0";
+                });
+                noteInput.value = '';
+                return;
+            }
+
+            // if condition; if limit reached
+            if(rawContent === "") return;
+
+            //alert msg
+            if (savedNotes.length >= 20) {
+                activeDeleteIndex = null; 
+                // Change modal text to show the warning
+                modalQuote.innerText = "Limit Reached!";
+                modalHeading.innerText = "The cloud is full. Delete a note to make space.";
+                deleteConfirmBtn.style.display = 'none'; // Hide the 'Release' button
+                popupModal.style.display = 'flex';
+                return;
+            }
+
+            savedNotes.push({
+                text: rawContent,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                color: palette[Math.floor(Math.random() * palette.length)],
+                tilt: Math.floor(Math.random() * 8) - 4
+            });
+
+            noteInput.value = '';
+            refreshWall();
+        }
+
+        function openModal(pos) {
+            activeDeleteIndex = pos;
+            //the delete text;
+            modalQuote.innerText = '"Everything you can imagine is real."';
+            modalHeading.innerText = "Let this thought go?";
+            deleteConfirmBtn.style.display = 'inline-block';
+            popupModal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            popupModal.style.display = 'none';
+        }
+
+        deleteConfirmBtn.onclick = () => {
+            if (activeDeleteIndex !== null) {
+                savedNotes.splice(activeDeleteIndex, 1);
+                refreshWall();
+            }
+            closeModal();
+        };
+
+        submitBtn.onclick = createNewNote;
+        noteInput.onkeypress = (event) => { 
+            if(event.key === 'Enter') createNewNote(); 
+        };
+
+        // Initial render
+        refreshWall();
+    </script>
+</body>
+</html>

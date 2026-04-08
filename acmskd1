@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Sticky Note Wall</title>
+    <style>
+        /* Simple, clean vibe for the project */
+        body {
+            background-color: #f4f4f9;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { color: #333; margin-bottom: 5px; }
+        .limit-text { font-size: 0.9rem; color: #666; margin-bottom: 20px; }
+
+        /* Input section */
+        .input-container {
+            margin-bottom: 30px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        #userTaskInput {
+            padding: 10px;
+            width: 250px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        #addBtn {
+            padding: 10px 15px;
+            background-color: #5d5fef;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #addBtn:hover { background-color: #4a4cd9; }
+
+        /* The Grid Wall */
+        #notesGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        /* Making them look like real sticky notes */
+        .sticky-note {
+            aspect-ratio: 1/1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.1);
+            position: relative;
+            /* Using transition for a nice hover effect */
+            transition: all 0.2s ease;
+        }
+
+        .sticky-note:hover {
+            transform: scale(1.03) translateY(-5px) !important;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .note-content {
+            font-size: 1.05rem;
+            color: #222;
+            line-height: 1.4;
+            overflow-wrap: break-word;
+        }
+
+        .note-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: rgba(0,0,0,0.6);
+            margin-top: 10px;
+        }
+
+        .remove-link {
+            color: #d9534f;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Sticky Note Wall</h1>
+    <p class="limit-text" id="statusMessage">Add up to 20 notes to your wall!</p>
+
+    <div class="input-container">
+        <input type="text" id="userTaskInput" placeholder="What's on your mind?">
+        <button id="addBtn">Stick It!</button>
+    </div>
+
+    <div id="notesGrid">
+        </div>
+
+<script>
+    // --- Setup Variables ---
+    const grid = document.getElementById('notesGrid');
+    const input = document.getElementById('userTaskInput');
+    const addBtn = document.getElementById('addBtn');
+    const statusMsg = document.getElementById('statusMessage');
+
+    // Colors for variety
+    const noteColors = ['#fff9c4', '#ffccbc', '#c8e6c9', '#bbdefb', '#f8bbd0'];
+
+    // Load existing data or start fresh
+    let savedNotes = JSON.parse(localStorage.getItem('myWallData')) || [];
+
+    // --- Main Functions ---
+
+    function updateDisplay() {
+        grid.innerHTML = '';
+        
+        savedNotes.forEach((item, i) => {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'sticky-note';
+            noteDiv.style.backgroundColor = item.color;
+            // Added a slight random tilt to make it look "human-placed"
+            noteDiv.style.transform = `rotate(${item.tilt}deg)`;
+
+            noteDiv.innerHTML = `
+                <div class="note-content">${item.text}</div>
+                <div class="note-details">
+                    <span>${item.timestamp}</span>
+                    <span class="remove-link" onclick="removeNote(${i})">Delete</span>
+                </div>
+            `;
+            grid.appendChild(noteDiv);
+        });
+
+        // Update the counter text
+        statusMsg.innerText = `Notes: ${savedNotes.length} / 20`;
+        
+        // Save to storage
+        localStorage.setItem('myWallData', JSON.stringify(savedNotes));
+    }
+
+    function createNewNote() {
+        const rawText = input.value.trim();
+
+        // Check 1: Empty input
+        if (rawText === "") {
+            alert("Oops, can't add an empty note!");
+            return;
+        }
+
+        // Check 2: Max limit (Requirement)
+        if (savedNotes.length >= 20) {
+            alert("The wall is full! Clear some space first.");
+            return;
+        }
+
+        // Create the note object
+        const noteData = {
+            text: rawText,
+            color: noteColors[Math.floor(Math.random() * noteColors.length)],
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            tilt: Math.floor(Math.random() * 6) - 3 // Small random rotation (-3 to +3)
+        };
+
+        savedNotes.push(noteData);
+        input.value = ''; // Clear input
+        updateDisplay();
+    }
+
+    function removeNote(index) {
+        // Confirmation is a nice "human" touch
+        if(confirm("Delete this note?")) {
+            savedNotes.splice(index, 1);
+            updateDisplay();
+        }
+    }
+
+    // --- Event Listeners ---
+
+    addBtn.addEventListener('click', createNewNote);
+
+    // Allow pressing "Enter" to add a note
+    input.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            createNewNote();
+        }
+    });
+
+    // Run on startup
+    updateDisplay();
+
+</script>
+</body>
+</html>
