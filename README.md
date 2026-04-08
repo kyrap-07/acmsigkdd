@@ -32,4 +32,13 @@ CSS3 – Styling (Grid, animations, starfield, glassmorphism)
 JavaScript (Vanilla) – Functionality & logic
 localStorage – Data persistence
 
+SCREENSHOTS:
+https://github.com/kyrap-07/acmsigkdd/blob/main/Screenshot%20(312).png
+
+https://github.com/kyrap-07/acmsigkdd/blob/main/Screenshot%20(313).png
+
+https://github.com/kyrap-07/acmsigkdd/blob/main/Screenshot%20(314).png
+
+https://github.com/kyrap-07/acmsigkdd/blob/main/Screenshot%20(315).png
+
 *🚀 Live Preview*
