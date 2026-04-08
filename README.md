@@ -41,4 +41,6 @@ https://github.com/kyrap-07/acmsigkdd/blob/main/Screenshot%20(314).png
 
 https://github.com/kyrap-07/acmsigkdd/blob/main/Screenshot%20(315).png
 
+https://github.com/kyrap-07/acmsigkdd/blob/main/Screenshot%20(318).png
+
 *🚀 Live Preview*
