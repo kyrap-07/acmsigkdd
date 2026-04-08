@@ -84,17 +84,35 @@
             box-shadow: 8px 8px 15px rgba(0,0,0,0.4);
             color: #222;
             transition: 0.3s;
+            position: relative;
+            cursor: grab; /* Shows it can be moved */
+        }
+
+        .sticky-note:active { cursor: grabbing; }
+
+        /* the pin icon */
+        .sticky-note::after {
+            content: "";
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, #ff4b2b, #8b0000);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .sticky-note:hover { transform: scale(1.05) rotate(0deg) !important; z-index: 5; }
 
-        .note-content { font-size: 1.1rem; font-weight: 500; word-wrap: break-word; }
+        .note-content { font-size: 1.1rem; font-weight: 500; word-wrap: break-word; margin-top: 10px; }
 
         .note-footer {
             display: flex;
             justify-content: space-between;
-            font-size: 0.75rem;
-            color: rgba(0,0,0,0.5);
+            font-size: 0.7rem;
+            color: rgba(0,0,0,0.6);
         }
 
         /* delete button */
@@ -169,6 +187,7 @@
         
         let savedNotes = JSON.parse(localStorage.getItem('galaxyWallData')) || [];
         let activeDeleteIndex = null;
+        let draggedIndex = null;
 
         function refreshWall() {
             wallContainer.innerHTML = '';
@@ -177,6 +196,12 @@
                 noteElement.className = 'sticky-note';
                 noteElement.style.backgroundColor = note.color;
                 noteElement.style.transform = `rotate(${note.tilt}deg)`;
+                noteElement.draggable = true;
+                
+                // drag effects
+                noteElement.ondragstart = () => { draggedIndex = pos; };
+                noteElement.ondragover = (e) => { e.preventDefault(); };
+                noteElement.ondrop = () => { handleDrop(pos); };
                 
                 noteElement.innerHTML = `
                     <div class="note-content">${note.text}</div>
@@ -191,11 +216,19 @@
             localStorage.setItem('galaxyWallData', JSON.stringify(savedNotes));
         }
 
+        // drag nd reorder opt
+        function handleDrop(targetPos) {
+            const temp = savedNotes[draggedIndex];
+            savedNotes.splice(draggedIndex, 1);
+            savedNotes.splice(targetPos, 0, temp);
+            refreshWall();
+        }
+
         function createNewNote() {
             const rawContent = noteInput.value.trim();
             
-            //an antigravity effect(additional magic) when u type "antigravity", it makes all the notes disappear hehe-,
-            //but when it all disappears, create another note to see, make it appear again.
+            // this is a an additional effect that i added in the code, when u type "antigravity" the notes disappear hehe-
+            // but no worries to bring it all back, we need to create another note..
             if(rawContent.toLowerCase() === 'antigravity') {
                 document.querySelectorAll('.sticky-note').forEach(noteCard => {
                     noteCard.style.transition = "transform 3s ease-in, opacity 2s";
@@ -206,23 +239,25 @@
                 return;
             }
 
-            // if condition; if limit reached
             if(rawContent === "") return;
 
-            //alert msg
             if (savedNotes.length >= 20) {
                 activeDeleteIndex = null; 
-                // Change modal text to show the warning
                 modalQuote.innerText = "Limit Reached!";
                 modalHeading.innerText = "The cloud is full. Delete a note to make space.";
-                deleteConfirmBtn.style.display = 'none'; // Hide the 'Release' button
+                deleteConfirmBtn.style.display = 'none';
                 popupModal.style.display = 'flex';
                 return;
             }
 
+            // timestamp (date + time)
+            const now = new Date();
+            const timeString = now.toLocaleDateString([], {day:'2-digit', month:'short'}) + " | " + 
+                               now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
             savedNotes.push({
                 text: rawContent,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                time: timeString,
                 color: palette[Math.floor(Math.random() * palette.length)],
                 tilt: Math.floor(Math.random() * 8) - 4
             });
@@ -233,7 +268,6 @@
 
         function openModal(pos) {
             activeDeleteIndex = pos;
-            //the delete text;
             modalQuote.innerText = '"Everything you can imagine is real."';
             modalHeading.innerText = "Let this thought go?";
             deleteConfirmBtn.style.display = 'inline-block';
@@ -257,7 +291,6 @@
             if(event.key === 'Enter') createNewNote(); 
         };
 
-        // Initial render
         refreshWall();
     </script>
 </body>
